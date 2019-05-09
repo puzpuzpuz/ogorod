@@ -1,0 +1,12 @@
+{
+    "proposerId": "PROPOSERID",
+    "configVersion": 0,
+    "prepare": {
+        "nodes": [],
+        "quorum": 0
+    },
+    "accept": {
+        "nodes": [],
+        "quorum": 0
+    }
+}
