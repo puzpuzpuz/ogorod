@@ -1,38 +1,33 @@
 'use strict'
 
 const express = require('express')
-const bodyParser = require('body-parser')
-const Config = require('../util/config')
-const proposerByConfig = require('./proposer-by-config')
+const { Proposer, BallotNumber } = require('../core')
 const HttpProposer = require('./http-proposer')
+const { asyncMiddleware } = require('../util/middlewares')
 
-async function startHttpProposer (proposerId, dir, port) {
-  const config = await Config.read(dir)
-  config.configVersion += 1
-  config.proposerId = proposerId
-  await Config.write(dir, config)
-  const proposer = new HttpProposer(dir, config, proposerByConfig(config))
+async function startProposerApi (proposerId, acceptors, port) {
+  const proposer = new Proposer(
+    new BallotNumber(0, `${proposerId}`),
+    acceptors,
+    acceptors
+  )
+  const httpProposer = new HttpProposer(proposer)
 
   const app = express()
-  app.use(bodyParser.urlencoded({ extended: true }))
-  app.use(bodyParser())
+  app.use(express.json({ limit: '100KB' }))
+  app.set('etag', false)
+  app.disable('x-powered-by')
+  
   const router = express.Router()
-
-  router.route('/register-change').post((req, res) => {
-    proposer.registerChange(req, res)
-  })
-  router.route('/change').post((req, res) => {
-    proposer.change(req, res)
-  })
-  router.route('/configuration').get((req, res) => {
-    proposer.getConfiguration(req, res)
-  })
-  router.route('/configuration').post((req, res) => {
-    proposer.updateConfiguration(req, res)
-  })
-
+  router.get('/api/:key',
+    asyncMiddleware(httpProposer.read.bind(httpProposer))
+  )
+  router.put('/api/:key',
+    asyncMiddleware(httpProposer.write.bind(httpProposer))
+  )
   app.use('/', router)
+  
   return app.listen(port)
 }
 
-module.exports = startHttpProposer
+module.exports = startProposerApi

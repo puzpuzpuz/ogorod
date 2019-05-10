@@ -3,7 +3,7 @@
 const express = require('express')
 const bodyParser = require('body-parser')
 
-async function startHttpAcceptor (port) {
+async function startAcceptorApi (port) {
   const app = express()
   app.use(bodyParser.urlencoded({ extended: true }))
   app.use(bodyParser())
@@ -13,4 +13,4 @@ async function startHttpAcceptor (port) {
   return app.listen(port)
 }
 
-module.exports = startHttpAcceptor
+module.exports = startAcceptorApi

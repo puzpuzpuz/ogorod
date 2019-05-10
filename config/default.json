@@ -1,0 +1,9 @@
+{
+    "nodeId": 0,
+    "publicPort": 8080,
+    "internalPort": 8081,
+    "acceptors": {
+        "nodes": ["localhost:8081"],
+        "quorum": 1
+    }
+}

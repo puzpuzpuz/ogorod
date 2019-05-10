@@ -1,6 +1,7 @@
 'use strict'
 
-const { Proposer, ProposerError } = require('./proposer')
+const { Proposer } = require('./proposer')
+const { ProposerError } = require('./errors')
 const { BallotNumber } = require('./ballot-number')
 
 exports.Proposer = Proposer

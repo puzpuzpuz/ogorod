@@ -1,94 +1,43 @@
 'use strict'
 
 const { ProposerError } = require('../core')
-const Config = require('./config')
 
 class HttpProposer {
-  constructor (dir, config, proposer) {
-    this.dir = dir
-    this.config = config
+  constructor (proposer) {
     this.proposer = proposer
-    this.changes = new Map()
-    this.isOff = false
   }
 
-  registerChange (req, res) {
-    if (this.isOff) {
-      res.setHeader('Content-Type', 'application/json')
-      res.status(500)
-      res.send(JSON.stringify({ 'code': 'ProposerIsOff' }))
-      return
-    }
-    let change = null
+  async read (req, res) {
+    const key = req.params.key
+    await this.apply(key, val => val, res)
+  }
+
+  async write (req, res) {
+    const key = req.params.key
+    await this.apply(_ => req.params.body, res)
+  }
+
+  async apply (key, fn, res) {
+    res.setHeader('Content-Type', 'application/json')
+    
+    let state = null
     try {
-      change = eval(req.body.body) // eslint-disable-line no-eval
+      state = await this.proposer.change(key, fn)
     } catch (e) {
       console.info(e)
       res.setHeader('Content-Type', 'application/json')
       res.status(400)
-      res.send(JSON.stringify({ 'code': 'CantEvalBody' }))
-      return
-    }
-    this.changes.set(req.body.name, change)
-    res.sendStatus(200)
-  }
-
-  async change (req, res) {
-    res.setHeader('Content-Type', 'application/json')
-    if (this.isOff) {
-      console.info('ProposerIsOff')
-      res.status(500)
-      res.send(JSON.stringify({ 'code': 'ProposerIsOff' }))
-      return
-    }
-    if (!this.changes.has(req.body.name)) {
-      console.info('UnknownChangeFunction')
-      res.status(404)
-      res.send(JSON.stringify({ 'code': 'UnknownChangeFunction' }))
-    } else {
-      const change = this.changes.get(req.body.name)
-      let state = null
-      try {
-        state = await this.proposer.change(req.body.key, change(req.body.params))
-      } catch (e) {
-        console.info(e)
-        res.setHeader('Content-Type', 'application/json')
-        res.status(400)
-        if (e instanceof ProposerError) {
-          res.send(JSON.stringify({ 'code': e.code }))
-        } else {
-          res.send(JSON.stringify({ 'code': 'UnknownError' }))
-        }
-        return
+      if (e instanceof ProposerError) {
+        res.send(JSON.stringify({ 'code': e.code }))
+      } else {
+        res.send(JSON.stringify({ 'code': 'UnknownError' }))
       }
-      res.status(200)
-      res.send(JSON.stringify({ 'value': state }))
+      return
     }
-  }
-
-  getConfiguration (req, res) {
-    res.setHeader('Content-Type', 'application/json')
     res.status(200)
-    res.send(JSON.stringify(this.config))
+    res.send(JSON.stringify({ 'value': state }))
   }
 
-  async updateConfiguration (req, res) {
-    res.setHeader('Content-Type', 'application/json')
-    if (req.body.configVersion !== this.config.configVersion) {
-      res.status(400)
-      res.send(JSON.stringify({ 'code': 'ConfigVersionMismatch' }))
-    } else {
-      this.isOff = true
-      try {
-        req.body.configVersion += 1
-        await Config.write(this.dir, req.body)
-        process.exit(1)
-      } catch (e) {
-        res.status(400)
-        res.send(JSON.stringify({ 'code': 'ConfigWriteProblem' }))
-      }
-    }
-  }
 }
 
 module.exports = HttpProposer
