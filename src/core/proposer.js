@@ -13,12 +13,12 @@ class Proposer {
     this.locks = new Set()
   }
 
-  async change (key, update, extra) {
+  async change (key, update) {
     if (!this.tryLock(key)) {
       throw ProposerError.ConcurrentRequestError()
     }
     try {
-      const [ballot, curr] = await this.guessValue(key, extra)
+      const [ballot, curr] = await this.guessValue(key)
 
       let next = curr
       let error = null
@@ -29,8 +29,7 @@ class Proposer {
       }
 
       const promise = ballot.next()
-
-      await this.commitValue(key, ballot, next, promise, extra)
+      await this.commitValue(key, ballot, next, promise)
 
       this.cache.set(key, [promise, next])
       if (error != null) {
@@ -43,13 +42,13 @@ class Proposer {
     }
   }
 
-  async guessValue (key, extra) {
+  async guessValue (key) {
     if (!this.cache.has(key)) {
       const tick = this.ballot.inc()
       let ok = null
       try {
         [ok] = await waitFor(
-          this.prepare.nodes.map(x => x.prepare(key, tick, extra)),
+          this.prepare.nodes.map(x => x.prepare(key, tick)),
           x => x.isPrepared,
           this.prepare.quorum
         )
@@ -69,12 +68,12 @@ class Proposer {
     return this.cache.get(key)
   }
 
-  async commitValue (key, ballot, value, promise, extra) {
+  async commitValue (key, ballot, value, promise) {
     let all = []
 
     try {
       [, all] = await waitFor(
-        this.accept.nodes.map(x => x.accept(key, ballot, value, promise, extra)),
+        this.accept.nodes.map(x => x.accept(key, ballot, value, promise)),
         x => x.isOk,
         this.accept.quorum
       )

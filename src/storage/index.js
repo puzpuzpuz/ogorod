@@ -1,5 +1,5 @@
 'use strict'
 
-// const { AcceptorClient } = require('./acceptor-client')
+const Storage = require('./storage')
 
-// exports.AcceptorClient = AcceptorClient
+exports.Storage = Storage

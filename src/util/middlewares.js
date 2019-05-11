@@ -13,5 +13,5 @@ function asyncMiddleware (fn) {
 }
 
 module.exports = {
-  asyncMiddleware,
+  asyncMiddleware
 }

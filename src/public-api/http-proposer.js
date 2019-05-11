@@ -1,6 +1,7 @@
 'use strict'
 
-const { ProposerError } = require('../core')
+const { Proposer, BallotNumber, ProposerError } = require('../core')
+const { AcceptorClient } = require('../internal-api')
 
 class HttpProposer {
   constructor (proposer) {
@@ -14,30 +15,52 @@ class HttpProposer {
 
   async write (req, res) {
     const key = req.params.key
-    await this.apply(_ => req.params.body, res)
+    await this.apply(key, _ => req.body, res)
   }
 
   async apply (key, fn, res) {
     res.setHeader('Content-Type', 'application/json')
-    
-    let state = null
+
+    let value = null
     try {
-      state = await this.proposer.change(key, fn)
+      value = await this.proposer.change(key, fn)
     } catch (e) {
-      console.info(e)
+      console.error(e)
       res.setHeader('Content-Type', 'application/json')
       res.status(400)
       if (e instanceof ProposerError) {
-        res.send(JSON.stringify({ 'code': e.code }))
+        res.json({ code: e.code })
       } else {
-        res.send(JSON.stringify({ 'code': 'UnknownError' }))
+        res.json({ code: 'UnknownError' })
       }
       return
     }
-    res.status(200)
-    res.send(JSON.stringify({ 'value': state }))
+    
+    if (value === null) {
+      res.status(404)
+      res.end()
+    } else {
+      res.status(200)
+      res.json(value)
+    }
   }
-
 }
 
-module.exports = HttpProposer
+function buildHttpProposer (proposerId, acceptors) {
+  const clients = acceptors.nodes.map(endpoint => new AcceptorClient(endpoint, x => BallotNumber.parse(x)))  
+  const proposer = new Proposer(
+    new BallotNumber(0, `${proposerId}`),
+    {
+      nodes: clients,
+      quorum: acceptors.quorum
+    },
+    {
+      nodes: clients,
+      quorum: acceptors.quorum
+    }
+  )
+  return new HttpProposer(proposer)
+}
+
+exports.buildHttpProposer = buildHttpProposer
+exports.HttpProposer = HttpProposer

@@ -6,12 +6,14 @@ Status: work in progress
 
 Nearest plans:
 
-* Swap Redis with an embedded key-value storage, like [LevelDB](https://github.com/Level/levelup)
-* Each node will contain both proposer (available via public HTTP API) and acceptor (available via private HTTP API)
-* Static configuration only
-* Implement basic operations: read (`GET /{key}`) and write (`PUT /{key}`)
+* Vanilla CASPaxos, thus no optimizations
+* Uses a primitive in-memory storage for acceptor data
+* Each node contains both proposer (available via public HTTP API) and acceptor (available via private HTTP API)
+* Supports static configuration only
+* Supports basic operations over HTTP API: read (`GET /{key}`) and write (`PUT /{key}`)
 
 Further plans:
 
 * Dynamic configuration
 * Implement advanced operations, like CAS and delete
+* Use an embedded key-value storage, like [LevelDB](https://github.com/Level/levelup), for data
