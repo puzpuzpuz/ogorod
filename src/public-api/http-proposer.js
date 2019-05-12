@@ -26,7 +26,6 @@ class HttpProposer {
       value = await this.proposer.change(key, fn)
     } catch (e) {
       console.error(e)
-      res.setHeader('Content-Type', 'application/json')
       res.status(400)
       if (e instanceof ProposerError) {
         res.json({ code: e.code })
@@ -37,10 +36,8 @@ class HttpProposer {
     }
 
     if (value === null) {
-      res.status(404)
-      res.end()
+      res.sendStatus(404)
     } else {
-      res.status(200)
       res.json(value)
     }
   }

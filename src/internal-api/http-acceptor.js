@@ -7,16 +7,26 @@ class HttpAcceptor {
 
   async prepare (req, res) {
     const { key, ballot } = req.body
-    const result = this.storage.prepare(key, ballot)
-    res.status(200)
-    res.json(result)
+    try {
+      const result = this.storage.prepare(key, ballot)
+      res.json(result)
+    } catch (e) {
+      console.error(e)
+      res.status(400)
+      res.json({ code: 'UnknownError' })
+    }
   }
 
   async accept (req, res) {
     const { key, ballot, value } = req.body
-    const result = this.storage.accept(key, ballot, value)
-    res.status(200)
-    res.send(result)
+    try {
+      const result = this.storage.accept(key, ballot, value)
+      res.json(result)
+    } catch (e) {
+      console.error(e)
+      res.status(400)
+      res.json({ code: 'UnknownError' })
+    }
   }
 }
 
