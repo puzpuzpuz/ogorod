@@ -13,8 +13,8 @@ class HttpAcceptor {
   }
 
   async accept (req, res) {
-    const { key, ballot, value, nextBallot } = req.body
-    const result = this.storage.accept(key, ballot, value, nextBallot)
+    const { key, ballot, value } = req.body
+    const result = this.storage.accept(key, ballot, value)
     res.status(200)
     res.send(result)
   }

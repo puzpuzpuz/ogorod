@@ -5,75 +5,56 @@ const { ProposerError, InsufficientQuorumError } = require('./errors')
 class Proposer {
   constructor (ballot, prepare, accept) {
     this.ballot = ballot
-
     this.prepare = prepare
     this.accept = accept
-
-    this.cache = new Map()
-    this.locks = new Set()
   }
 
   async change (key, update) {
-    if (!this.tryLock(key)) {
-      throw ProposerError.ConcurrentRequestError()
-    }
+    const [ballot, currValue] = await this.guessValue(key)
+
+    let next = currValue
+    let error = null
     try {
-      const [ballot, curr] = await this.guessValue(key)
-
-      let next = curr
-      let error = null
-      try {
-        next = update(curr)
-      } catch (e) {
-        error = e
-      }
-
-      const promise = ballot.next()
-      await this.commitValue(key, ballot, next, promise)
-
-      this.cache.set(key, [promise, next])
-      if (error != null) {
-        throw ProposerError.UpdateError(error)
-      }
-
-      return next
-    } finally {
-      this.unlock(key)
+      next = update(currValue)
+    } catch (e) {
+      throw ProposerError.UpdateError(error)
     }
+
+    await this.commitValue(key, ballot, next)
+    return next
   }
 
   async guessValue (key) {
-    if (!this.cache.has(key)) {
-      const tick = this.ballot.inc()
-      let ok = null
-      try {
-        [ok] = await waitFor(
-          this.prepare.nodes.map(x => x.prepare(key, tick)),
-          x => x.isPrepared,
-          this.prepare.quorum
-        )
-      } catch (e) {
-        if (e instanceof InsufficientQuorumError) {
-          for (const x of e.all.filter(x => x.isConflict)) {
-            this.ballot.fastforwardAfter(x.ballot)
-          }
-          throw ProposerError.PrepareError()
-        } else {
-          throw e
+    const tick = this.ballot.inc()
+    let ok = null
+    try {
+      [ok] = await waitFor(
+        this.prepare.nodes.map(x => x.prepare(key, tick)),
+        x => x.isPrepared,
+        this.prepare.quorum
+      )
+    } catch (e) {
+      if (e instanceof InsufficientQuorumError) {
+        for (const x of e.all.filter(x => x.isConflict)) {
+          this.ballot.fastforwardAfter(x.ballot)
         }
+        throw ProposerError.PrepareError()
+      } else {
+        throw e
       }
-      const value = max(ok, x => x.ballot).value
-      this.cache.set(key, [tick, value])
     }
-    return this.cache.get(key)
+
+    const max = ok.reduce((acc, e) => {
+      return acc.ballot.compareTo(e.ballot) < 0 ? e : acc
+    }, ok[0])
+    return [tick, max.value]
   }
 
-  async commitValue (key, ballot, value, promise) {
+  async commitValue (key, ballot, value) {
     let all = []
-
     try {
       [, all] = await waitFor(
-        this.accept.nodes.map(x => x.accept(key, ballot, value, promise)),
+        this.accept.nodes.map(x => x.accept(key, ballot, value)),
         x => x.isOk,
         this.accept.quorum
       )
@@ -86,29 +67,10 @@ class Proposer {
       }
     } finally {
       for (const x of all.filter(x => x.isConflict)) {
-        this.cache.delete(key)
         this.ballot.fastforwardAfter(x.ballot)
       }
     }
   }
-
-  tryLock (key) {
-    if (this.locks.has(key)) {
-      return false
-    }
-    this.locks.add(key)
-    return true
-  }
-
-  unlock (key) {
-    this.locks.delete(key)
-  }
-}
-
-function max (iterable, selector) {
-  return iterable.reduce((acc, e) => {
-    return selector(acc).compareTo(selector(e)) < 0 ? e : acc
-  }, iterable[0])
 }
 
 function waitFor (promises, cond, count) {

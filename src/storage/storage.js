@@ -35,11 +35,10 @@ class Storage {
     }
   }
 
-  accept (key, ballot, value, nextBallot) {
+  accept (key, ballot, value) {
     const promised = this.promised[key] || BallotNumber.zero()
     const accepted = this.accepted[key] || BallotNumber.zero()
     const candidate = BallotNumber.parse(ballot)
-    const nextCandidate = BallotNumber.parse(nextBallot)
 
     if (candidate.compareTo(promised) < 0) {
       return {
@@ -54,7 +53,7 @@ class Storage {
       }
     }
 
-    this.promised[key] = nextCandidate
+    delete this.promised[key]
     this.accepted[key] = candidate
     this.values[key] = value
     return {
