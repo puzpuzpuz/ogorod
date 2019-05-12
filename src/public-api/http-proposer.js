@@ -35,7 +35,7 @@ class HttpProposer {
       }
       return
     }
-    
+
     if (value === null) {
       res.status(404)
       res.end()
@@ -47,7 +47,7 @@ class HttpProposer {
 }
 
 function buildHttpProposer (proposerId, acceptors) {
-  const clients = acceptors.nodes.map(endpoint => new AcceptorClient(endpoint, x => BallotNumber.parse(x)))  
+  const clients = acceptors.nodes.map(endpoint => new AcceptorClient(endpoint, x => BallotNumber.parse(x)))
   const proposer = new Proposer(
     new BallotNumber(0, `${proposerId}`),
     {

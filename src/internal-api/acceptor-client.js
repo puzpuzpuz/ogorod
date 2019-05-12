@@ -14,7 +14,7 @@ class AcceptorClient {
         key,
         ballot: ballot.stringify()
       })
-      
+
       const acceptedBallot = this.parseBallotNumber(resp.data.ballot)
       if (resp.data.status === 'ok') {
         const acceptedValue = acceptedBallot.isZero() ? null : JSON.parse(resp.data.value).value

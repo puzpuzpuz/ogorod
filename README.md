@@ -6,14 +6,19 @@ Status: work in progress
 
 Nearest plans:
 
-* Vanilla CASPaxos, thus no optimizations
+* Vanilla CASPaxos, no optimizations
 * Uses a primitive in-memory storage for acceptor data
 * Each node contains both proposer (available via public HTTP API) and acceptor (available via private HTTP API)
 * Supports static configuration only
 * Supports basic operations over HTTP API: read (`GET /{key}`) and write (`PUT /{key}`)
 
-Further plans:
+## Technical restrictions
 
-* Dynamic configuration
+* As proposer configuration is not versioned and not persisted, when a node was stopped, it can't be restarted
+
+## Potential enhancements
+
+* Add optimizations, like 1RTT optimization
+* Dynamic configuration support
 * Implement advanced operations, like CAS and delete
 * Use an embedded key-value storage, like [LevelDB](https://github.com/Level/levelup), for data

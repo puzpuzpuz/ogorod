@@ -4,7 +4,10 @@ const path = require('path')
 const nconf = require('nconf')
 
 nconf
-  .env({ parseValues: true })
+  .env({
+    separator: '__',
+    parseValues: true
+  })
   .file('default', path.join(__dirname, '/../../config/default.json'))
   .required(['acceptors:nodes', 'acceptors:quorum'])
 
