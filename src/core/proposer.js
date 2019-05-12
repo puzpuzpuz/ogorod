@@ -73,39 +73,40 @@ class Proposer {
   }
 }
 
-function waitFor (promises, cond, count) {
+async function waitFor (promises, cond, count) {
+  const results = []
+  const replies = []
+  let isResolved = false
+  let failed = 0
+
+  function handleError (reject) {
+    failed += 1
+    if (promises.length - failed < count) {
+      isResolved = true
+      reject(new InsufficientQuorumError(replies))
+    }
+  }
+
   return new Promise((resolve, reject) => {
-    const result = []
-    const all = []
-    let isResolved = false
-    let failed = 0
-    for (let promise of promises) {
-      (async function () {
-        let value = null
-        let error = false
-        try {
-          value = await promise
+    for (const promise of promises) {
+      promise
+        .then(value => {
           if (isResolved) return
-          all.push(value)
-          if (!cond(value)) error = true
-        } catch (e) {
+          replies.push(value)
+          if (!cond(value)) {
+            return handleError(reject)
+          }
+
+          results.push(value)
+          if (results.length === count) {
+            isResolved = true
+            resolve([results, replies])
+          }
+        })
+        .catch(_ => {
           if (isResolved) return
-          error = true
-        }
-        if (error) {
-          failed += 1
-          if (promises.length - failed < count) {
-            isResolved = true
-            reject(new InsufficientQuorumError(all))
-          }
-        } else {
-          result.push(value)
-          if (result.length === count) {
-            isResolved = true
-            resolve([result, all])
-          }
-        }
-      })()
+          handleError(reject)
+        })
     }
   })
 }
