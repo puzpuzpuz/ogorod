@@ -47,6 +47,7 @@ $ curl http://localhost:8080/api/test
 ## Next Steps
 
 * Implement some [Jepsen](https://github.com/jepsen-io/jepsen) tests.
+* Implement CAS operation.
 
 ## Potential Enhancements
 
@@ -54,6 +55,8 @@ Being a toy implementation, Ogorod has many flaws. Here are some enhancements th
 
 * Add applicable *Paxos optimizations, like CASPaxos 1RTT optimization.
 * Dynamic configuration support, including proposer configuration versioning and persistence.
-* Implement advanced operations support, like CAS and delete. Delete operation will require GC-like background process (see the CASPaxos paper for more details).
+* Implement delete operation support. It will require a GC-like background process (see the CASPaxos paper for more details).
 * Use an embedded key-value storage, like [LevelDB](https://github.com/Level/levelup), for data persistence.
+* Swap HTTP with plain TCP communication for the internal API.
+* Implement proper error handling and logging.
 * And many-many more.
