@@ -6,7 +6,7 @@ class Storage {
   constructor () {
     this.promised = {}
     this.accepted = {}
-    this.values = {}
+    this.states = {}
   }
 
   prepare (key, ballot) {
@@ -31,11 +31,11 @@ class Storage {
     return {
       status: 'ok',
       ballot: accepted.stringify(),
-      value: this.values[key]
+      state: this.states[key]
     }
   }
 
-  accept (key, ballot, value) {
+  accept (key, ballot, state) {
     const promised = this.promised[key] || BallotNumber.zero()
     const accepted = this.accepted[key] || BallotNumber.zero()
     const candidate = BallotNumber.parse(ballot)
@@ -55,7 +55,9 @@ class Storage {
 
     delete this.promised[key]
     this.accepted[key] = candidate
-    this.values[key] = value
+    if (state !== null) {
+      this.states[key] = state
+    }
     return {
       status: 'ok'
     }

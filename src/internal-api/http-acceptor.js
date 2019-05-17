@@ -18,9 +18,9 @@ class HttpAcceptor {
   }
 
   async accept (req, res) {
-    const { key, ballot, value } = req.body
+    const { key, ballot, state } = req.body
     try {
-      const result = this.storage.accept(key, ballot, value)
+      const result = this.storage.accept(key, ballot, state)
       res.json(result)
     } catch (e) {
       console.error(e)

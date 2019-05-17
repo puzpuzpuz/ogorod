@@ -17,8 +17,8 @@ class AcceptorClient {
 
       const acceptedBallot = this.parseBallotNumber(resp.data.ballot)
       if (resp.data.status === 'ok') {
-        const acceptedValue = acceptedBallot.isZero() ? null : resp.data.value
-        return { isPrepared: true, ballot: acceptedBallot, value: acceptedValue }
+        const acceptedState = acceptedBallot.isZero() ? null : resp.data.state
+        return { isPrepared: true, ballot: acceptedBallot, state: acceptedState }
       } else {
         return { isConflict: true, ballot: acceptedBallot }
       }
@@ -27,12 +27,12 @@ class AcceptorClient {
     }
   }
 
-  async accept (key, ballot, value) {
+  async accept (key, ballot, state) {
     try {
       const resp = await axios.post(`http://${this.address}/internal-api/accept`, {
         key,
         ballot: ballot.stringify(),
-        value
+        state
       })
 
       if (resp.data.status === 'ok') {

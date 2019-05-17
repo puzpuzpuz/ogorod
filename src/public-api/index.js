@@ -19,6 +19,9 @@ async function startProposerApi (proposerId, acceptors, port) {
   router.put('/api/:key',
     asyncMiddleware(httpProposer.write.bind(httpProposer))
   )
+  router.post('/api/:key/cas',
+    asyncMiddleware(httpProposer.cas.bind(httpProposer))
+  )
   app.use('/', router)
 
   return app.listen(port)

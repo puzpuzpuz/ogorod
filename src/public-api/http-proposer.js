@@ -10,20 +10,42 @@ class HttpProposer {
 
   async read (req, res) {
     const key = req.params.key
-    await this.apply(key, val => val, res)
+    await this.apply(key, state => state, res)
   }
 
   async write (req, res) {
     const key = req.params.key
-    await this.apply(key, _ => req.body, res)
+    const writeFn = state => {
+      const nextVersion = state ? state.version + 1 : 0
+      return {
+        version: nextVersion,
+        value: req.body
+      }
+    }
+    await this.apply(key, writeFn, res)
+  }
+
+  async cas (req, res) {
+    const key = req.params.key
+    const { value, version } = req.body
+    const casFn = state => {
+      if (state !== null && state.version === version) {
+        return {
+          version: state.version + 1,
+          value
+        }
+      }
+      return state
+    }
+    await this.apply(key, casFn, res)
   }
 
   async apply (key, fn, res) {
     res.setHeader('Content-Type', 'application/json')
 
-    let value = null
+    let state = null
     try {
-      value = await this.proposer.change(key, fn)
+      state = await this.proposer.change(key, fn)
     } catch (e) {
       console.error(e)
       res.status(400)
@@ -35,10 +57,10 @@ class HttpProposer {
       return
     }
 
-    if (value === null) {
+    if (state === null) {
       res.sendStatus(404)
     } else {
-      res.json(value)
+      res.json(state)
     }
   }
 }
@@ -47,10 +69,6 @@ function buildHttpProposer (proposerId, acceptors) {
   const clients = acceptors.nodes.map(endpoint => new AcceptorClient(endpoint, x => BallotNumber.parse(x)))
   const proposer = new Proposer(
     new BallotNumber(0, `${proposerId}`),
-    {
-      nodes: clients,
-      quorum: acceptors.quorum
-    },
     {
       nodes: clients,
       quorum: acceptors.quorum

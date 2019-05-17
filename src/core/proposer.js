@@ -3,35 +3,34 @@
 const { ProposerError, InsufficientQuorumError } = require('./errors')
 
 class Proposer {
-  constructor (ballot, prepare, accept) {
+  constructor (ballot, acceptors) {
     this.ballot = ballot
-    this.prepare = prepare
-    this.accept = accept
+    this.acceptors = acceptors
   }
 
   async change (key, update) {
-    const [ballot, currValue] = await this.guessValue(key)
+    const [ballot, currState] = await this.guessState(key)
 
-    let next = currValue
+    let next = currState
     let error = null
     try {
-      next = update(currValue)
+      next = update(currState)
     } catch (e) {
       throw ProposerError.UpdateError(error)
     }
 
-    await this.commitValue(key, ballot, next)
+    await this.commitState(key, ballot, next)
     return next
   }
 
-  async guessValue (key) {
+  async guessState (key) {
     const tick = this.ballot.inc()
     let ok = null
     try {
       [ok] = await waitFor(
-        this.prepare.nodes.map(x => x.prepare(key, tick)),
+        this.acceptors.nodes.map(x => x.prepare(key, tick)),
         x => x.isPrepared,
-        this.prepare.quorum
+        this.acceptors.quorum
       )
     } catch (e) {
       if (e instanceof InsufficientQuorumError) {
@@ -47,16 +46,16 @@ class Proposer {
     const max = ok.reduce((acc, e) => {
       return acc.ballot.compareTo(e.ballot) < 0 ? e : acc
     }, ok[0])
-    return [tick, max.value]
+    return [tick, max.state]
   }
 
-  async commitValue (key, ballot, value) {
+  async commitState (key, ballot, state) {
     let all = []
     try {
       [, all] = await waitFor(
-        this.accept.nodes.map(x => x.accept(key, ballot, value)),
+        this.acceptors.nodes.map(x => x.accept(key, ballot, state)),
         x => x.isOk,
-        this.accept.quorum
+        this.acceptors.quorum
       )
     } catch (e) {
       if (e instanceof InsufficientQuorumError) {
@@ -90,14 +89,14 @@ async function waitFor (promises, cond, count) {
   return new Promise((resolve, reject) => {
     for (const promise of promises) {
       promise
-        .then(value => {
+        .then(res => {
           if (isResolved) return
-          replies.push(value)
-          if (!cond(value)) {
+          replies.push(res)
+          if (!cond(res)) {
             return handleError(reject)
           }
 
-          results.push(value)
+          results.push(res)
           if (results.length === count) {
             isResolved = true
             resolve([results, replies])
