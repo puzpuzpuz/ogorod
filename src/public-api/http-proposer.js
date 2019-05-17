@@ -15,29 +15,12 @@ class HttpProposer {
 
   async write (req, res) {
     const key = req.params.key
-    const writeFn = state => {
-      const nextVersion = state ? state.version + 1 : 0
-      return {
-        version: nextVersion,
-        value: req.body
-      }
-    }
-    await this.apply(key, writeFn, res)
+    await this.apply(key, writeFn(req.body), res)
   }
 
   async cas (req, res) {
     const key = req.params.key
-    const { value, version } = req.body
-    const casFn = state => {
-      if (state !== null && state.version === version) {
-        return {
-          version: state.version + 1,
-          value
-        }
-      }
-      return state
-    }
-    await this.apply(key, casFn, res)
+    await this.apply(key, casFn(req.body), res)
   }
 
   async apply (key, fn, res) {
@@ -65,7 +48,35 @@ class HttpProposer {
   }
 }
 
-function buildHttpProposer (proposerId, acceptors) {
+const writeFn = input =>
+  state => {
+    const nextVersion = state ? state.version + 1 : 0
+    return {
+      version: nextVersion,
+      value: input
+    }
+  }
+
+const casFn = input => {
+  const { version, value } = input
+  return state => {
+    if (state === null && version === null) {
+      return {
+        version: 0,
+        value
+      }
+    }
+    if (state !== null && state.version === version) {
+      return {
+        version: state.version + 1,
+        value
+      }
+    }
+    return state
+  }
+}
+
+const buildHttpProposer = (proposerId, acceptors) => {
   const clients = acceptors.nodes.map(endpoint => new AcceptorClient(endpoint, x => BallotNumber.parse(x)))
   const proposer = new Proposer(
     new BallotNumber(0, `${proposerId}`),

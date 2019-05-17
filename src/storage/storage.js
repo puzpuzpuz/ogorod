@@ -55,9 +55,7 @@ class Storage {
 
     delete this.promised[key]
     this.accepted[key] = candidate
-    if (state !== null) {
-      this.states[key] = state
-    }
+    this.states[key] = state
     return {
       status: 'ok'
     }

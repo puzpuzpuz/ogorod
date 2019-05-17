@@ -60,6 +60,8 @@ $ curl -X POST http://localhost:8080/api/test/cas \
 {"version":1,"value":{"bar":"baz"}}
 ```
 
+Note: pass `version: null` to initialize value during CAS operation.
+
 ## Next Steps
 
 * Implement CAS operation - DONE
